@@ -23,13 +23,14 @@ Written October 12, 2026. Ordered so each step unblocks the next. Items marked *
 - [ ] **(you)** Pick a host. Checked October 12, 2026: Render's free tier sleeps after 15 idle minutes, takes about a minute to wake, and loses local files, so the quota data would need an outside database. Cloudflare's free tier has no sleep but needs the service rewritten and allows only 10 ms of processing per request. A small always-on paid instance with a disk runs the current code almost unchanged
 - [x] **Decided October 13, 2026: Cloudflare's free plan.** A throwaway test passed that day: Gemini's free tier answered from both the ordinary route (Dallas) and a component pinned to eastern North America (Atlanta), uploads of up to 4 MB were processed without hitting the limit, and Cloudflare reported the caller's country. Only US callers were tried
 - [x] Port the service: one Worker in front of a single pinned component that holds the usage limits and makes every Gemini call, so calls always leave from the US. Built October 13, 2026 (`server/worker.mjs`, `wrangler.jsonc`); tested only against a local stand-in for Cloudflare's storage
-- [ ] **(you)** Deploy it, following "Host on Cloudflare" in `docs/development.md`, then analyze a capture from the installed extension
+- [x] **(you)** Deploy it, following "Host on Cloudflare" in `docs/development.md`. Live October 13, 2026: `/api/health` answers ready
+- [ ] **(you)** Analyze a capture from the installed extension through the hosted service
 - [x] Replace the local SQLite quota file with a shared store: the pinned component's own storage, with one writer
 - [x] Read the caller's address correctly behind the host's proxy, so per-network limits work (Cloudflare's `CF-Connecting-IP`; not yet observed on the deployed service)
-- [ ] **(you)** Store the Gemini key as a host secret; confirm it never reaches logs or responses
+- [x] **(you)** Store the Gemini key as a host secret (the service only reports ready once it has one). Responses and the service's one log line never include it
 - [x] Request logs never contain screenshots or text captures: stored logs are off, and the only line the service writes names a missing setting
 - [ ] Keep the pause switch and test it (kept as `ANALYSIS_ENABLED`; not yet tested on the deployed service)
-- [ ] Serve over HTTPS on a stable address
+- [x] Serve over HTTPS on a stable address: `https://daydrop-api.nicknguye.workers.dev`
 
 ## 4. Decide free or paid Gemini
 
@@ -50,8 +51,8 @@ To do:
 
 ## 5. Production build of the extension
 
-- [ ] Point the build at the hosted address and remove the `127.0.0.1` permission (one build command, in `docs/development.md`; run it after deploying)
-- [ ] Confirm the package contains no key, no local address, and no unused permission
+- [x] Point the build at the hosted address and remove the `127.0.0.1` permission (done October 13, 2026; the command is in `docs/development.md`)
+- [x] Confirm the package contains no key, no local address, and no unused permission. Checked `output/daydrop-0.1.0.zip` on October 13, 2026: no key; the manifest names only the hosted service and Google; every permission is used. The client code still accepts a localhost service for development builds, but none is configured
 - [ ] Set the version number
 
 ## 6. Consent and privacy in the product
@@ -71,8 +72,8 @@ To do:
 ## 8. Chrome Web Store
 
 - [ ] **(you)** Register a developer account (one-time fee, about $5)
-- [ ] Listing text, 128px icon (done), screenshots, small promo image
-- [ ] Justify each permission and fill in the data-use disclosures to match the privacy policy
+- [ ] Listing text (drafted in `docs/store-listing.md`), 128px icon (done), screenshots, small promo image
+- [ ] Justify each permission and fill in the data-use disclosures to match the privacy policy (drafted in `docs/store-listing.md`; enter them in the dashboard)
 - [ ] **(you)** Submit for review, starting as unlisted or with a small tester group
 
 ## 9. Running it
