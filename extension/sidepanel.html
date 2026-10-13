@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daydrop</title>
+  <link rel="stylesheet" href="sidepanel.css">
+  <script type="module" src="sidepanel.mjs"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 3v4M16 3v4M4 11h16M9 16l2 2 4-4"/></svg></div>
+      <span class="brand-name">Daydrop</span>
+      <span id="mode-badge" class="mode-badge"><span></span>Preview</span>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">LESS COPYING. MORE PLANNING.</p>
+        <h1>From capture<br>to calendar.</h1>
+        <p>Find the plans. Check the details. Make them yours.</p>
+      </section>
+
+      <ol class="workflow" aria-label="Event workflow"><li id="step-capture" aria-current="step"><span>1</span>Capture</li><li id="step-review"><span>2</span>Review</li><li id="step-export"><span>3</span>Export</li></ol>
+
+      <section class="allowance" aria-label="Analysis allowance">
+        <div><strong id="usage-count">Checking allowance…</strong><button id="refresh-usage" class="text-button" type="button">Refresh allowance</button></div>
+        <p id="usage-reset">Manual drafts and ICS stay available.</p>
+        <p id="analysis-privacy" class="preview-notice">Development preview · simulated results. Screenshot recognition is not connected. No captures are sent to Google.</p>
+      </section>
+
+      <details id="capture-details" class="capture-shell" open>
+      <summary><strong>Capture source</strong><span id="capture-summary">Screenshot, text or this page</span></summary>
+      <section class="capture" aria-label="Capture events">
+        <div class="tabs" role="tablist" aria-label="Input type">
+          <button id="screenshot-tab" role="tab" aria-selected="true" aria-controls="screenshot-panel" class="tab active">Screenshot</button>
+          <button id="text-tab" role="tab" aria-selected="false" aria-controls="text-panel" class="tab" tabindex="-1">Text</button>
+        </div>
+        <div id="screenshot-panel" role="tabpanel" aria-labelledby="screenshot-tab">
+          <button id="dropzone" class="dropzone" type="button">
+            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg></span>
+            <strong>Paste a screenshot</strong>
+            <span>or click to upload · PNG, JPG, WebP</span>
+            <span class="paste-key">Ctrl + V</span>
+          </button>
+          <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <div id="image-preview" class="image-preview" hidden>
+            <img id="preview-image" alt="Screenshot ready for analysis">
+            <div><span id="image-name"></span><button id="remove-image" type="button" class="text-button">Remove</button></div>
+          </div>
+          <div id="image-help" class="input-help"><p id="image-help-text">Try a simulated schedule to preview event review.</p><button id="demo-image" class="text-button" type="button">Try the four-match schedule ↗</button></div>
+        </div>
+        <div id="text-panel" role="tabpanel" aria-labelledby="text-tab" hidden>
+          <label class="sr-only" for="source-text">Text containing events</label>
+          <textarea id="source-text" class="source-text" rows="6" placeholder="Dinner tomorrow at 7 PM at Cafe Luna&#10;Dentist on October 12, 2026 at 9:30 AM"></textarea>
+          <div class="text-tools"><span id="text-mode-help">Preview uses a simple text parser</span><button id="sample-text" class="text-button" type="button">Try an example ↗</button></div>
+        </div>
+        <button id="analyze-input" class="button primary analyze" type="button" disabled>Find events <span aria-hidden="true">↗</span></button>
+        <div class="page-actions">
+          <button id="analyze-page" class="text-button" type="button"><span aria-hidden="true">▤</span> Analyze this page</button>
+          <span aria-hidden="true">·</span>
+          <button id="capture-page" class="text-button" type="button">Capture page image</button>
+        </div>
+        <p id="capture-note" class="capture-note">Simulated results. No API key or model setup.</p>
+      </section>
+      </details>
+
+      <div id="status" class="message" role="status" aria-live="polite" hidden></div>
+      <div id="undo-bar" class="undo-bar" hidden><span id="undo-message"></span><button id="undo-remove" type="button" class="text-button">Undo</button></div>
+      <button id="cancel-analysis" class="text-button cancel" type="button" hidden>Cancel analysis</button>
+
+      <section class="review" aria-labelledby="review-title">
+        <div class="section-heading"><h2 id="review-title">Review events <span id="event-count" class="count">0</span></h2><button id="add-event" class="text-button" type="button">+ Add event</button></div>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-calendar" aria-hidden="true"><span></span><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <h3>Your next plans start here.</h3>
+          <p>Events appear here for a quick review.<br>You choose what makes it into your calendar.</p>
+          <button id="sample-events" class="text-button" type="button">Try sample events <span aria-hidden="true">→</span></button>
+        </div>
+        <div id="review-tools" class="review-tools" hidden><button id="select-all" class="text-button" type="button">Select all</button><button id="review-next" class="text-button" type="button">Review next →</button><button id="clear-drafts" class="text-button muted" type="button">Clear drafts</button></div>
+        <div id="event-list" class="event-list"></div>
+      </section>
+
+      <details class="settings">
+        <summary>Settings <span aria-hidden="true">⌄</span></summary>
+        <div class="settings-content">
+          <label>Default time zone<input id="default-zone" list="time-zones" autocomplete="off"></label>
+          <p class="field-help">“Tomorrow” uses the current date here when analysis starts. Existing drafts keep their resolved dates.</p>
+          <p class="field-help">Drafts and evidence are saved on this device. Screenshot files are not saved. Clear drafts removes the saved event data.</p>
+          <div id="mock-controls"><label>Preview response<select id="mock-scenario"><option value="normal">Normal</option><option value="empty">No events</option><option value="unavailable">Service unavailable</option><option value="invalid">Invalid model response</option><option value="timeout">Timeout</option></select></label>
+          <p class="field-help">Development controls. Every accepted analysis uses the preview allowance, including simulated failures.</p></div>
+          <p id="google-help" class="field-help">Google imports require OAuth setup. ICS export works without signing in.</p>
+        </div>
+      </details>
+      <datalist id="time-zones"></datalist>
+    </main>
+
+    <footer class="export-bar">
+      <div class="export-heading"><strong id="selection-count">0 events selected</strong><span id="selection-note">Review before adding</span></div>
+      <label id="calendar-choice" class="calendar-choice" hidden>Google calendar<select id="calendar"></select></label>
+      <div class="export-actions"><button id="download-ics" class="button secondary" type="button" disabled><span aria-hidden="true">↓</span> Download .ics</button><button id="google-action" class="button primary" type="button" disabled>Connect Google <span aria-hidden="true">↗</span></button></div>
+      <p>Same reviewed events. Your choice of calendar.</p>
+    </footer>
+  </div>
+</body>
+</html>

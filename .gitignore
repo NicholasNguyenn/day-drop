@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.usage-handoff/
+.artifacts/
+output/
+tmp/
+*.log

@@ -1,0 +1,19 @@
+{
+  "name": "daydrop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node --env-file-if-exists=.env scripts/build.mjs",
+    "preview": "node server/preview.mjs",
+    "setup:provider": "node scripts/setup-provider.mjs",
+    "live": "node server/live.mjs",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "pretest": "node --env-file-if-exists=.env scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Daydrop",
+  "version": "0.1.0",
+  "description": "Review events from screenshots and webpages, then add to Google Calendar or download an ICS file.",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://www.googleapis.com/*"
+  ],
+  "optional_host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_title": "Open Daydrop"
+  },
+  "background": {
+    "service_worker": "background.mjs",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  }
+}
