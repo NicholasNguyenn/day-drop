@@ -3,6 +3,11 @@ import { addDays, isDate, isTime, isTimeZone, resolveDate, zonedParts, zonedTime
 export const cleanText = (value, max = 8000) => typeof value === 'string'
   ? value.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max) : '';
 
+export const autoEndNote = 'No valid end time was found, so this event is set to 1 hour. Adjust if needed.';
+export const statedDurationNote = minutes => 'End time is set from the length shown in the source ('
+  + [minutes >= 60 ? Math.floor(minutes / 60) + ' hr' : '', minutes % 60 ? minutes % 60 + ' min' : ''].filter(Boolean).join(' ') + '). Adjust if needed.';
+export const autoAllDayNote ='No time was found, so this is set as an all-day event. Add times if needed.';
+
 export function normalizeCandidates(candidates, context, source = {}) {
   if (!Array.isArray(candidates) || candidates.length > 50) throw new Error('Analysis returned an invalid event list.');
   return candidates.map(candidate => {
@@ -13,9 +18,11 @@ export function normalizeCandidates(candidates, context, source = {}) {
       .filter(item => typeof item === 'string').slice(0, 12).map(item => cleanText(item, 500)) : [];
     if (candidate.timeZone && !isTimeZone(candidate.timeZone)) assumptions.push('Source time zone was unclear; using your selected time zone.');
     if (typeof candidate.date === 'string' && /^(today|tomorrow)$/i.test(candidate.date.trim())) {
-      assumptions.push(candidate.date.trim() + ' resolved to ' + startDate + ' from the current date in ' + context.timeZone + '.');
+      assumptions.push('The source says “' + candidate.date.trim().toLowerCase() + '”, read as ' + startDate + ' in ' + context.timeZone + '.');
     }
-    const allDay = candidate.allDay === true;
+    // No time at all means all day. A time that was present but unreadable still needs the user.
+    const allDay = candidate.allDay === true || (!candidate.startTime && !candidate.endTime);
+    if (allDay && candidate.allDay !== true) assumptions.push(autoAllDayNote);
     const draft = {
       id: crypto.randomUUID(), title: cleanText(candidate.title, 180), selected: true,
       startDate, startTime: isTime(candidate.startTime) ? candidate.startTime : '',
@@ -29,15 +36,18 @@ export function normalizeCandidates(candidates, context, source = {}) {
     if (!startDate) assumptions.push('Choose a date; the source did not provide a complete date.');
     if (startDate && startDate < context.anchorDate) assumptions.push('This date is before the analysis date (' + context.anchorDate + '); verify the year and whether the event is still relevant.');
     if (!allDay && !draft.startTime) assumptions.push('Enter a start time or choose All day.');
-    if (candidate.endDate != null && !draft.endDate) assumptions.push('Choose an end date; the source end date was unclear.');
-    if (!allDay && startDate && draft.startTime && !candidate.endTime && candidate.endDate == null) {
+    // A readable end time on a later day is kept; anything else unreadable gets the labelled default.
+    if (!allDay && startDate && draft.startTime && !draft.endTime && (!draft.endDate || draft.endDate === startDate)) {
+      // Only a duration printed in the source is used; a day or more is treated as a misread.
+      const stated = Number.isInteger(candidate.durationMinutes) && candidate.durationMinutes > 0 && candidate.durationMinutes < 1440 ? candidate.durationMinutes : 0;
       try {
-        const end = new Date(zonedTimeToInstant(startDate, draft.startTime, timeZone).getTime() + 3_600_000);
+        const end = new Date(zonedTimeToInstant(startDate, draft.startTime, timeZone).getTime() + (stated || 60) * 60_000);
         const parts = zonedParts(end, timeZone);
         draft.endDate = parts.date; draft.endTime = parts.time;
-        assumptions.push('End time uses a 60 minute default; adjust if needed.');
+        assumptions.push(stated ? statedDurationNote(stated) : autoEndNote);
       } catch { /* Validation reports time-zone gaps or overlaps for review. */ }
     }
+    if (candidate.endDate != null && !draft.endDate) assumptions.push('Choose an end date; the source end date was unclear.');
     return draft;
   });
 }

@@ -1,5 +1,5 @@
 import { makeAnalysisContext, isTimeZone, isDate } from './shared/dates.mjs';
-import { normalizeCandidates, validateDraft, eventFingerprint, safeUrl } from './shared/events.mjs';
+import { normalizeCandidates, validateDraft, eventFingerprint, safeUrl, autoEndNote, autoAllDayNote } from './shared/events.mjs';
 import { serializeCalendar } from './shared/ics.mjs';
 import { capturePage } from './providers.mjs';
 import { AnalysisClient } from './service.mjs';
@@ -102,6 +102,9 @@ function dateLabel(draft) {
   return formatted + '\n' + time + end + ' · ' + draft.timeZone;
 }
 
+const fieldIssues = { title: /title/i, startDate: /start date/i, endDate: /end date|final day/i, timeZone: /time zone/i,
+  startTime: /start time|does not exist|occurs twice/i, endTime: /end time/i };
+
 function updateCard(card, draft) {
   card.querySelector('.event-title').textContent = draft.title || 'Untitled event';
   card.querySelector('.event-date').textContent = dateLabel(draft);
@@ -118,6 +121,15 @@ function updateCard(card, draft) {
   const issueList = card.querySelector('.issues');
   issueList.replaceChildren(...issues.map(issue => element('li', '', issue)));
   if (result?.error) issueList.append(element('li', '', result.error));
+  card.querySelector('.issue-box').hidden = !issueList.children.length;
+  // Matches validateDraft's wording; time-zone gap and overlap errors name the start time.
+  for (const input of card.querySelectorAll('.event-fields [data-field]')) {
+    input.parentElement.classList.toggle('invalid', issues.some(issue => fieldIssues[input.dataset.field]?.test(issue)));
+  }
+  const review = card.querySelector('.review-button');
+  review.textContent = issues.length ? 'Fix ' + issues.length + (issues.length === 1 ? ' field' : ' fields') + ' to continue' : draft.reviewed ? 'Reviewed' : 'Mark reviewed';
+  const done = Boolean(draft.reviewed) && !issues.length;
+  review.classList.toggle('primary', !done); review.classList.toggle('secondary', done);
   card.querySelector('.event-select').setAttribute('aria-label', 'Select ' + (draft.title || 'untitled event'));
   refreshActions();
 }
@@ -135,6 +147,8 @@ function renderDrafts() {
     info.append(element('span', 'event-title'), element('span', 'event-date'), element('span', 'event-state'));
     summary.append(checkbox, info); card.append(summary);
     const body = element('div', 'card-body');
+    const issueBox = element('div', 'issue-box');
+    issueBox.append(element('strong', '', 'Fix these before exporting'), element('ul', 'issues')); body.append(issueBox);
     const fields = element('div', 'event-fields');
     function field(labelText, name, { type = 'text', wide = false, multiline = false, time = false } = {}) {
       const label = element('label', wide ? 'wide' : '');
@@ -176,16 +190,19 @@ function renderDrafts() {
     }
     if (draft.assumptions.length) {
       const assumptions = element('ul', 'assumptions');
-      assumptions.append(...draft.assumptions.map(item => element('li', '', item))); body.append(assumptions);
+      assumptions.append(...draft.assumptions.map(item => element('li', '', item)));
+      const notes = element('div', 'evidence'); notes.append(element('strong', '', 'What Daydrop assumed'), assumptions); body.append(notes);
     }
-    body.append(element('ul', 'issues'));
     const bottom = element('div', 'card-bottom');
     const remove = element('button', 'text-button muted', 'Remove event'); remove.type = 'button';
     remove.addEventListener('click', () => removeDrafts([draft.id]));
-    const reviewed = element('button', 'text-button', 'Mark reviewed'); reviewed.type = 'button';
+    const reviewed = element('button', 'button primary review-button'); reviewed.type = 'button';
     reviewed.addEventListener('click', () => {
       const issues = validateDraft(draft);
-      if (issues.length) { showStatus('Fix this event’s missing details before marking it reviewed.', 'error'); return; }
+      if (issues.length) {
+        showStatus('Fix the highlighted fields before marking this event reviewed.', 'error');
+        const first = card.querySelector('label.invalid input'); first?.focus(); (first || issueBox).scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
+      }
       draft.reviewed = true; persist(); updateCard(card, draft); card.open = false; focusNextReview();
       showStatus(state.drafts.some(item => item.selected && (validateDraft(item).length || needsReview(item)))
         ? 'Reviewed ' + draft.title + '. Continue reviewing the selected events.' : 'Selected events are reviewed and ready to export.');
@@ -273,7 +290,10 @@ async function runAnalysis(inputFactory) {
       $('capture-details').open = false;
     }
     const label = isMock ? 'Simulated analysis: ' : 'Found ';
-    showStatus(fresh.length ? label + fresh.length + (fresh.length === 1 ? ' event.' : ' events.') + ' Review the details before exporting.'
+    const count = note => fresh.filter(draft => draft.assumptions.includes(note)).length;
+    const defaults = [[count(autoEndNote), ' set to 1 hour (no end time)'], [count(autoAllDayNote), ' set to all day (no time)']]
+      .filter(([total]) => total).map(([total, text]) => total + text).join(', ');
+    showStatus(fresh.length ? label + fresh.length + (fresh.length === 1 ? ' event.' : ' events.') + (defaults ? ' ' + defaults + '.' : '') + ' Review the details before exporting.'
       : candidates.length ? 'Found ' + candidates.length + ' candidates already in your drafts.' : 'No events found. Try another capture or add an event manually.');
   } catch (error) {
     showStatus(state.controller.signal.aborted ? 'Analysis canceled. Your existing drafts are saved.'

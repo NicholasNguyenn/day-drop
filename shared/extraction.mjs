@@ -7,10 +7,10 @@ export const extractionSchema = {
   // the prompt and parseExtraction instead of expanding its output grammar.
   properties: { events: { type: 'array', items: {
     type: 'object', additionalProperties: false,
-    required: ['title', 'date', 'startTime', 'endDate', 'endTime', 'timeZone', 'allDay', 'location', 'description', 'evidence', 'uncertainties'],
+    required: ['title', 'date', 'startTime', 'endDate', 'endTime', 'durationMinutes', 'timeZone', 'allDay', 'location', 'description', 'evidence', 'uncertainties'],
     properties: {
       title: { type: 'string' }, date: nullableString, startTime: nullableString,
-      endDate: nullableString, endTime: nullableString, timeZone: nullableString,
+      endDate: nullableString, endTime: nullableString, durationMinutes: { type: ['integer', 'null'] }, timeZone: nullableString,
       allDay: { type: 'boolean' }, location: nullableString, description: nullableString,
       evidence: { type: 'string' }, uncertainties: { type: 'array', items: { type: 'string' } },
     },
@@ -33,6 +33,7 @@ export function extractionInstructions(context) {
     'allDay is true only for an explicitly all-day event or a date-only deadline. A missing time alone is not proof of all-day status.',
     'For all-day events endDate is the inclusive final day. For timed events it is the actual end date.',
     'Do not invent an end time. Do not infer recurrence instances outside dates present in the evidence.',
+    'durationMinutes is the event length in minutes only when the evidence prints one for that event, such as a film runtime of 2 hr 9 min (129). Otherwise null. Never estimate a typical length, and leave endTime null rather than calculating it.',
     'Evidence is a short exact excerpt supporting each event. Exclude historical examples, publication dates, and canceled events.',
     'Return an empty events array if there are no schedulable candidates. At most 50 events.',
   ].join('\n');
@@ -54,6 +55,7 @@ export function parseExtraction(value, context) {
       if (event[field] !== null && typeof event[field] !== 'string') throw new Error('Analysis returned invalid ' + field + '.');
       if (typeof event[field] === 'string' && event[field].length > (field === 'description' ? 8000 : field === 'location' ? 1000 : 120)) throw new Error('Analysis returned oversized ' + field + '.');
     }
+    if (event.durationMinutes != null && typeof event.durationMinutes !== 'number') throw new Error('Analysis returned invalid durationMinutes.');
     if (event.title.length > 180 || event.evidence.length > 2000 || event.uncertainties.length > 20 || event.uncertainties.some(note => note.length > 1000)) throw new Error('Analysis returned oversized event details.');
   }
   return resolveVisualDates(result.events, context);

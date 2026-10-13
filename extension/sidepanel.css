@@ -477,17 +477,31 @@ textarea {
   font-size:11px;
   line-height:1.7;
   color:#92704e}
+.issue-box {
+  border:1px solid #e3b5a8;
+  border-radius:8px;
+  background:#fdf2ee;
+  padding:9px 11px;
+  margin-bottom:12px;
+  color:var(--error)}
+.issue-box strong {
+  font-size:12px;
+  font-weight:650}
 .issues {
-  list-style:none;
-  padding:0;
-  margin:10px 0 0;
-  color:var(--error);
-  font-size:11px;
+  padding-left:16px;
+  margin:3px 0 0;
+  font-size:12px;
   line-height:1.7}
+label.invalid {
+  color:var(--error)}
+label.invalid input {
+  border-color:var(--error);
+  background:#fdf6f3}
 .card-bottom {
   display:flex;
   justify-content:space-between;
-  margin-top:9px}
+  align-items:center;
+  margin-top:12px}
 .settings {
   border-top:1px solid var(--line);
   margin-top:27px;

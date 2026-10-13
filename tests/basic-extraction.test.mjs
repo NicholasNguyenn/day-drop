@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeAnalysisContext } from '../shared/dates.mjs';
 import { analyzeBasic, extractTextEvents, extractStructuredEvents } from '../shared/basic-extraction.mjs';
-import { normalizeCandidates, validateDraft } from '../shared/events.mjs';
+import { normalizeCandidates, validateDraft, autoEndNote, autoAllDayNote } from '../shared/events.mjs';
 import { serializeCalendar } from '../shared/ics.mjs';
 
 const context = makeAnalysisContext('America/Chicago', '2026-10-06T17:00:00Z');
@@ -20,7 +20,7 @@ test('no-model text creates reviewed drafts and real ICS from relative, explicit
   assert.equal(drafts('Dinner tomorrow at 7 PM at Cafe Luna')[0].location, 'Cafe Luna');
   assert.equal(drafts('Dinner at Cafe Luna tomorrow at 7 PM')[0].location, 'Cafe Luna');
   assert.ok(events[0].assumptions.some(note => note.includes('PM')));
-  assert.ok(events[1].assumptions.some(note => note.includes('60 minute')));
+  assert.ok(events[1].assumptions.includes(autoEndNote));
   assert.deepEqual(events.flatMap(validateDraft), []);
   assert.equal((serializeCalendar(events).match(/BEGIN:VEVENT/g) || []).length, 3);
 });
@@ -33,14 +33,25 @@ test('weekday and in-N-days dates freeze from context across year boundary', () 
   assert.ok(events[0].assumptions.some(note => note.includes('next matching day')));
 });
 
-test('ambiguous dates, invalid dates and bare hours block export without invented fields', () => {
-  for (const text of ['Meeting October 12 at 7', 'Meeting 10/12/2026 at 7 PM', 'Meeting 2026-02-30 at 9 AM', 'Meeting tomorrow at 25:00', 'Meeting tomorrow 11–1 PM', 'Meeting tomorrow 09:00–25:00', 'Dinner tomorrow at 7:30']) {
+test('ambiguous dates, invalid dates and unreadable start times block export without invented fields', () => {
+  for (const text of ['Meeting October 12 at 7', 'Meeting 10/12/2026 at 7 PM', 'Meeting 2026-02-30 at 9 AM', 'Meeting tomorrow at 25:00', 'Meeting tomorrow 11–1 PM', 'Dinner tomorrow at 7:30']) {
     const [event] = drafts(text); assert.ok(event, text); assert.ok(validateDraft(event).length, text);
+    assert.equal(event.allDay, false, text);
     assert.throws(() => serializeCalendar([event]), undefined, text);
   }
-  const [event] = drafts('Workshop tomorrow');
-  assert.equal(event.allDay, false);
-  assert.equal(event.startTime, '');
+});
+
+test('no time becomes a labelled all-day event; an unreadable end becomes a labelled hour', () => {
+  const [workshop] = drafts('Workshop tomorrow');
+  assert.equal(workshop.allDay, true); assert.equal(workshop.endDate, '2026-10-07');
+  assert.ok(workshop.assumptions.includes(autoAllDayNote));
+  assert.deepEqual(validateDraft(workshop), []);
+  const [deadline] = drafts('Registration closes tomorrow');
+  assert.ok(!deadline.assumptions.includes(autoAllDayNote));
+  const [meeting] = drafts('Meeting tomorrow 09:00–25:00');
+  assert.deepEqual([meeting.startTime, meeting.endDate, meeting.endTime, meeting.allDay], ['09:00', '2026-10-07', '10:00', false]);
+  assert.ok(meeting.assumptions.includes(autoEndNote));
+  assert.deepEqual(validateDraft(meeting), []);
 });
 
 test('explicit HH:mm is accepted and past dates receive a visible review warning', () => {
@@ -82,13 +93,15 @@ test('structured event offsets convert correctly and date-only events remain rev
   assert.deepEqual(events.flatMap(validateDraft), []);
 });
 
-test('malformed source end fields stay invalid rather than falling back to valid defaults', () => {
+test('malformed end times get the labelled hour; a readable end time with a bad end date stays invalid', () => {
   const [time] = normalizeCandidates([{ title: 'Meeting', date: 'tomorrow', startTime: '09:00', endTime: 'bogus' }], context);
-  assert.equal(time.endTime, ''); assert.ok(validateDraft(time).length);
+  assert.equal(time.endTime, '10:00'); assert.ok(time.assumptions.includes(autoEndNote)); assert.deepEqual(validateDraft(time), []);
   const [date] = normalizeCandidates([{ title: 'Meeting', date: 'tomorrow', startTime: '09:00', endTime: '10:00', endDate: 'wrong' }], context);
   assert.equal(date.endDate, ''); assert.ok(validateDraft(date).length);
+  const [later] = normalizeCandidates([{ title: 'Trip', date: '2026-10-12', startTime: '09:00', endTime: null, endDate: '2026-10-14' }], context);
+  assert.equal(later.endDate, '2026-10-14'); assert.ok(validateDraft(later).length);
   const [structured] = normalizeCandidates(extractStructuredEvents([{ name: 'Meeting', startDate: '2026-10-12T09:00:00Z', endDate: 'bad' }], context), context);
-  assert.ok(validateDraft(structured).length);
+  assert.ok(structured.assumptions.includes(autoEndNote)); assert.deepEqual(validateDraft(structured), []);
 });
 
 test('basic extraction never invokes network or models, rejects images and deduplicates results', () => {

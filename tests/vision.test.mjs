@@ -26,7 +26,7 @@ test('four visual cards preserve individual matches, shared headings, and mornin
   assert.ok(events[2].uncertainties.some(note => /Year inferred/.test(note)));
   assert.equal(events[0].endTime, null);
   assert.equal(drafts[0].endTime, '05:00');
-  assert.ok(drafts[0].assumptions.some(note => /60/.test(note)));
+  assert.ok(drafts[0].assumptions.some(note => /set to 1 hour/.test(note)));
   assert.ok(drafts.every(draft => !draft.reviewed));
   assert.equal(JSON.parse(JSON.stringify(drafts))[0].startDate, '2026-10-09');
 });
@@ -40,6 +40,7 @@ test('yearless visual headings require an anchored nearby date and matching week
   assert.equal(parseExtraction({ events: [candidate('Anchor', 'today', '09:00'), candidate('Match', 'Friday Jan 1', '04:00')] }, newYear)[1].date, '2027-01-01');
   const unresolvedEnd = { ...candidate('Match', '2026-10-10', '04:00'), endDate: 'Saturday Oct 10' };
   const [draft] = normalizeCandidates(parseExtraction({ events: [unresolvedEnd] }, context), context);
-  assert.ok(validateDraft(draft).length);
-  assert.ok(!draft.assumptions.some(note => /60 minute default/.test(note)));
+  assert.deepEqual([draft.endDate, draft.endTime], ['2026-10-10', '05:00']);
+  assert.ok(draft.assumptions.some(note => /set to 1 hour/.test(note)));
+  assert.deepEqual(validateDraft(draft), []);
 });

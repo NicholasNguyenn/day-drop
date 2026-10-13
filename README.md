@@ -36,7 +36,7 @@ You can try **Try the four-match schedule** to explore the workflow with an exam
 
 ## Dates and accuracy
 
-“Today” and “tomorrow” use the date in your chosen time zone when analysis starts. They do not change later when you export. If the source omits an end time, Daydrop suggests a one-hour duration and flags it for review.
+“Today” and “tomorrow” use the date in your chosen time zone when analysis starts. They do not change later when you export. If no valid end time is found, Daydrop sets a one-hour duration. If no time is found at all, it makes the event all day. Both are noted on the event for review.
 
 AI can miss events or misread details. Check every date, time, time zone, and duration before adding events to your calendar. Editing an event requires you to review it again.
 

@@ -49,8 +49,8 @@ The backend returns candidate data only. Shared application code normalizes and 
 - Navigation controls, logos, publication dates, canceled events, and repeated competition footers do not become events. Competition and round labels can become notes.
 - Today and tomorrow remain relative in model output and resolve from the frozen analysis date. Reopened drafts never shift dates.
 - A yearless month/day heading can resolve when another event has a today/tomorrow heading and exactly one matching date lies within the next 31 days. Printed weekdays must agree. The inferred year remains visible for review. Other incomplete or conflicting dates stay unresolved.
-- Missing start times require correction or an explicit All day choice. Date-only deadlines can be all-day events.
-- A known start with no end gets the existing visibly labeled 60 minute default. Bo3 does not imply duration. Explicit unresolved end fields must stay unresolved.
+- An event with no time at all becomes an all-day event automatically, with a visible note. A start time that is present but unreadable still requires correction. Date-only deadlines can be all-day events.
+- A known start with no valid end time gets a visibly labeled one-hour default, including when the source end was unreadable. Bo3 does not imply duration. A missing end time with a later end date stays unresolved.
 - The selected time zone is visible. Missing source zones use it; explicit offsets convert consistently. Ambiguous/nonexistent daylight-saving times require correction.
 - Preserve the 50-draft limit, deduplication, selection, review state, local persistence, and undo.
 

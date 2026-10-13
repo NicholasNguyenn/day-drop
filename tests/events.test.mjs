@@ -32,8 +32,18 @@ test('time-zone conversion handles fractional offsets and daylight saving transi
 test('missing end time uses a visible default that rolls into the next day', () => {
   const draft = makeDraft({ startTime: '23:30', endTime: null });
   assert.equal(draft.endDate, '2026-10-08'); assert.equal(draft.endTime, '00:30');
-  assert.match(draft.assumptions.join(' '), /60 minute default/);
+  assert.match(draft.assumptions.join(' '), /set to 1 hour/);
   assert.deepEqual(validateDraft(draft), []);
+});
+
+test('a duration printed in the source sets the end time; implausible or absent ones fall back to an hour', () => {
+  const film = makeDraft({ startTime: '21:15', endTime: null, durationMinutes: 129 });
+  assert.deepEqual([film.endDate, film.endTime], ['2026-10-07', '23:24']);
+  assert.match(film.assumptions.join(' '), /length shown in the source \(2 hr 9 min\)/);
+  assert.equal(makeDraft({ startTime: '21:15', endTime: null, durationMinutes: 5000 }).endTime, '22:15');
+  assert.equal(makeDraft({ startTime: '21:15', endTime: '22:00', durationMinutes: 129 }).endTime, '22:00');
+  assert.throws(() => parseExtraction({ events: [{ title: 'x', allDay: false, evidence: '', uncertainties: [], date: null, startTime: null,
+    endDate: null, endTime: null, timeZone: null, location: null, description: null, durationMinutes: '129' }] }, context), /durationMinutes/);
 });
 
 test('missing fields and invalid time ranges cannot be exported', () => {

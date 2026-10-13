@@ -104,7 +104,8 @@ export function extractTextEvents(text, context) {
       const startDate = date.date === 'today' ? context.anchorDate : date.date === 'tomorrow' ? addDays(context.anchorDate, 1) : date.date;
       endDate = addDays(startDate, 1); notes.push('The time range ends the following day; review the overnight end date.');
     }
-    result.push(candidate({ title, date: date.date, startTime: times.startTime, endTime: times.endTime, endDate,
+    // An unreadable time must not look like "no time", which would become an all-day event.
+    result.push(candidate({ title, date: date.date, startTime: times.startTime || (times.match ? 'invalid' : null), endTime: times.endTime, endDate,
       allDay: /\ball[ -]day\b/i.test(line) || (!times.match && /\b(deadline|due|closes?|registration ends)\b/i.test(line)),
       timeZone: zone && isTimeZone(zone[0]) ? zone[0] : null, location: location?.[1].trim().replace(/\s+\b(?:at|on|from)\s*$/i, '').trim() || '',
       evidence: headingDate && !primaryDate ? 'Schedule date: ' + headingDate.date + '\n' + line : line, uncertainties: notes }));

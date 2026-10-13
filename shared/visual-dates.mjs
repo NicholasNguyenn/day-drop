@@ -28,8 +28,8 @@ export function resolveVisualDates(events, context) {
         if (heading[1] && instant.getUTCDay() !== weekdays.indexOf(heading[1].slice(0, 3).toLowerCase())) continue;
         matches.push(date);
       }
-      // Preserve an explicit unresolved end so normalization cannot replace it
-      // with the otherwise useful default duration.
+      // Keep an explicit unresolved end visible to normalization, which either
+      // flags it or applies the labelled one-hour default.
       result[field] = matches.length === 1 ? matches[0] : field === 'endDate' ? value : null;
       result.uncertainties.push(matches.length === 1
         ? 'Year inferred for “' + value + '” from the nearby relative date heading: ' + matches[0] + '. Confirm this schedule is current.'
