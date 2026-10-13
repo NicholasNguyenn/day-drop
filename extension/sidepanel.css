@@ -356,6 +356,7 @@ h3 {
   background:#fff;
   overflow:hidden}
 .event-card>summary {
+  position:relative;
   display:flex;
   align-items:flex-start;
   gap:10px;
@@ -367,9 +368,16 @@ h3 {
 .event-card>summary:after {
   content:"⌄";
   color:#a2b098;
-  margin-left:auto;
-  font-size:13px;
-  padding-top:1px}
+  position:absolute;
+  top:13px;
+  right:13px;
+  font-size:13px}
+.review-button.quick {
+  align-self:flex-end;
+  margin:22px 0 0 auto;
+  padding:7px 11px;
+  font-size:11px;
+  flex-shrink:0}
 .event-card[open]>summary:after {
   content:"⌃"}
 .event-card input[type="checkbox"] {

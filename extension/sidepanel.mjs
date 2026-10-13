@@ -126,10 +126,12 @@ function updateCard(card, draft) {
   for (const input of card.querySelectorAll('.event-fields [data-field]')) {
     input.parentElement.classList.toggle('invalid', issues.some(issue => fieldIssues[input.dataset.field]?.test(issue)));
   }
-  const review = card.querySelector('.review-button');
-  review.textContent = issues.length ? 'Fix ' + issues.length + (issues.length === 1 ? ' field' : ' fields') + ' to continue' : draft.reviewed ? 'Reviewed' : 'Mark reviewed';
   const done = Boolean(draft.reviewed) && !issues.length;
-  review.classList.toggle('primary', !done); review.classList.toggle('secondary', done);
+  for (const review of card.querySelectorAll('.review-button')) {
+    review.textContent = issues.length ? 'Fix ' + issues.length + (issues.length === 1 ? ' field' : ' fields') + ' to continue' : draft.reviewed ? 'Reviewed' : 'Mark reviewed';
+    review.classList.toggle('primary', !done); review.classList.toggle('secondary', done);
+  }
+  card.querySelector('.review-button.quick').hidden = !issues.length && !needsReview(draft);
   card.querySelector('.event-select').setAttribute('aria-label', 'Select ' + (draft.title || 'untitled event'));
   refreshActions();
 }
@@ -145,7 +147,9 @@ function renderDrafts() {
     checkbox.addEventListener('change', () => { draft.selected = checkbox.checked; persist(); refreshActions(); });
     const info = element('div', 'event-info');
     info.append(element('span', 'event-title'), element('span', 'event-date'), element('span', 'event-state'));
-    summary.append(checkbox, info); card.append(summary);
+    // Stays visible on a collapsed card so review never requires reopening it.
+    const quickReview = element('button', 'button primary review-button quick'); quickReview.type = 'button';
+    summary.append(checkbox, info, quickReview); card.append(summary);
     const body = element('div', 'card-body');
     const issueBox = element('div', 'issue-box');
     issueBox.append(element('strong', '', 'Fix these before exporting'), element('ul', 'issues')); body.append(issueBox);
@@ -197,10 +201,11 @@ function renderDrafts() {
     const remove = element('button', 'text-button muted', 'Remove event'); remove.type = 'button';
     remove.addEventListener('click', () => removeDrafts([draft.id]));
     const reviewed = element('button', 'button primary review-button'); reviewed.type = 'button';
-    reviewed.addEventListener('click', () => {
+    for (const button of [reviewed, quickReview]) button.addEventListener('click', event => {
+      event.preventDefault(); // inside <summary> a click would otherwise toggle the card
       const issues = validateDraft(draft);
       if (issues.length) {
-        showStatus('Fix the highlighted fields before marking this event reviewed.', 'error');
+        showStatus('Fix the highlighted fields before marking this event reviewed.', 'error'); card.open = true;
         const first = card.querySelector('label.invalid input'); first?.focus(); (first || issueBox).scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
       }
       draft.reviewed = true; persist(); updateCard(card, draft); card.open = false; focusNextReview();
