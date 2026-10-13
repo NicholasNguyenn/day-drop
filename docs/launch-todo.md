@@ -21,12 +21,14 @@ Written October 12, 2026. Ordered so each step unblocks the next. Items marked *
 ## 3. Host the analysis service
 
 - [ ] **(you)** Pick a host. Checked October 12, 2026: Render's free tier sleeps after 15 idle minutes, takes about a minute to wake, and loses local files, so the quota data would need an outside database. Cloudflare's free tier has no sleep but needs the service rewritten and allows only 10 ms of processing per request. A small always-on paid instance with a disk runs the current code almost unchanged
-- [ ] Before rewriting anything for Cloudflare, deploy a throwaway test there that answers two questions: does a call to Gemini's free tier succeed from Cloudflare (others have hit "User location is not supported"), and does a 1 MB image request stay inside the free plan's processing limit
-- [ ] Replace the local SQLite quota file with a shared store, unless the host is a single always-on instance with a disk
-- [ ] Read the caller's address correctly behind the host's proxy, so per-network limits work
-- [ ] Store the Gemini key as a host secret; confirm it never reaches logs or responses
-- [ ] Confirm request logs never contain screenshots or text captures
-- [ ] Keep the pause switch and test it
+- [x] **Decided October 13, 2026: Cloudflare's free plan.** A throwaway test passed that day: Gemini's free tier answered from both the ordinary route (Dallas) and a component pinned to eastern North America (Atlanta), uploads of up to 4 MB were processed without hitting the limit, and Cloudflare reported the caller's country. Only US callers were tried
+- [x] Port the service: one Worker in front of a single pinned component that holds the usage limits and makes every Gemini call, so calls always leave from the US. Built October 13, 2026 (`server/worker.mjs`, `wrangler.jsonc`); tested only against a local stand-in for Cloudflare's storage
+- [ ] **(you)** Deploy it, following "Host on Cloudflare" in `docs/development.md`, then analyze a capture from the installed extension
+- [x] Replace the local SQLite quota file with a shared store: the pinned component's own storage, with one writer
+- [x] Read the caller's address correctly behind the host's proxy, so per-network limits work (Cloudflare's `CF-Connecting-IP`; not yet observed on the deployed service)
+- [ ] **(you)** Store the Gemini key as a host secret; confirm it never reaches logs or responses
+- [x] Request logs never contain screenshots or text captures: stored logs are off, and the only line the service writes names a missing setting
+- [ ] Keep the pause switch and test it (kept as `ANALYSIS_ENABLED`; not yet tested on the deployed service)
 - [ ] Serve over HTTPS on a stable address
 
 ## 4. Decide free or paid Gemini
@@ -41,13 +43,14 @@ Checked against the [Gemini API terms](https://ai.google.dev/gemini-api/terms) (
 To do:
 
 - [x] **Decided October 13, 2026: stay on the free tier**, with a disclosure telling users not to capture personal information
-- [ ] Exclude the EEA, UK and Switzerland in the Chrome Web Store's distribution settings, and refuse those countries on the server if the host reports the caller's country
+- [ ] Exclude the EEA, UK and Switzerland in the Chrome Web Store's distribution settings
+- [x] Refuse those countries, and callers with no known country, on the server (built October 13, 2026)
 - [ ] State that Daydrop is for adults in the listing and the privacy policy
-- [ ] Set the global daily cap below the project's real limit, with headroom
+- [x] Set the global daily cap below the project's real limit, with headroom. Since October 13, 2026 all users together get 80% of the project's daily and per-minute limits, three analyses at a time (`liveConfiguration` in `server/service.mjs`). With the limits in `wrangler.jsonc` that is 400 a day and 12 a minute
 
 ## 5. Production build of the extension
 
-- [ ] Point the build at the hosted address and remove the `127.0.0.1` permission
+- [ ] Point the build at the hosted address and remove the `127.0.0.1` permission (one build command, in `docs/development.md`; run it after deploying)
 - [ ] Confirm the package contains no key, no local address, and no unused permission
 - [ ] Set the version number
 
@@ -56,7 +59,7 @@ To do:
 - [x] Notice in the panel: what is sent, to whom, and how Google's free tier may use it
 - [x] Link to the privacy policy from the panel (Settings; points at the public GitHub repository)
 - [x] One-time acknowledgement before the first analysis: where captures go, no personal information, adults only, not offered in the EEA, UK or Switzerland
-- [ ] Update the policy for the hosted service: what is logged, for how long, who to contact
+- [x] Update the policy for the hosted service: what is logged, for how long, who to contact (October 13, 2026; reread it once the service is live)
 
 ## 7. Google sign-in for the public
 

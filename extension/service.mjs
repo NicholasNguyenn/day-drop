@@ -10,6 +10,22 @@ export function backendUrl(value) {
 const imageData = image => new Promise((resolve, reject) => {
   const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Could not read screenshot.')); reader.readAsDataURL(image);
 });
+// The hosted service runs on a small free allowance. A screenshot over the limit is redrawn
+// as JPEG within the service's size rules, then shrunk until its upload is about 1 MB.
+export async function fitImage(image, limit = 750_000) {
+  if (image.size <= limit) return image;
+  const bitmap = await createImageBitmap(image); const { width, height } = bitmap;
+  let scale = Math.min(1, 4096 / Math.max(width, height), Math.sqrt(8_000_000 / (width * height))); let result = image;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const canvas = new OffscreenCanvas(Math.max(1, Math.floor(width * scale)), Math.max(1, Math.floor(height * scale)));
+    const draw = canvas.getContext('2d'); draw.fillStyle = '#fff'; draw.fillRect(0, 0, canvas.width, canvas.height); // JPEG has no transparency.
+    draw.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    result = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+    if (result.size <= limit) break;
+    scale *= Math.sqrt(limit / result.size) * 0.9;
+  }
+  bitmap.close(); return result;
+}
 
 export class AnalysisClient {
   constructor({ installationId, origin = serviceOrigin, mode = serviceMode, fetcher = fetch, onUsage = () => {} }) {
@@ -51,7 +67,7 @@ export class AnalysisClient {
     if (this.mode === 'mock' && image && fixture !== 'matches') throw new Error('Screenshot recognition is not connected yet. Try the simulated match schedule to preview the flow.');
     await this.connect({ signal }); signal?.throwIfAborted();
     const result = await this.request('/v1/analyses', { body: { requestId: crypto.randomUUID(), mode: this.mode, text,
-      image: image ? await imageData(image) : null, structuredEvents, context, ...(this.mode === 'mock' ? { fixture, scenario } : {}) }, signal });
+      image: image ? await imageData(await fitImage(image)) : null, structuredEvents, context, ...(this.mode === 'mock' ? { fixture, scenario } : {}) }, signal });
     return parseExtraction(result, context);
   }
 }

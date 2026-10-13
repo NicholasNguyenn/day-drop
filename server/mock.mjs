@@ -1,5 +1,5 @@
 import { analyzeBasic } from '../shared/basic-extraction.mjs';
-import { ApiError } from './quota.mjs';
+import { ApiError } from './quota-core.mjs';
 
 export function validateMock(input, body) {
   if (input.image && body.fixture !== 'matches') throw new ApiError('MOCK_CAPTURE_ONLY', 'Screenshot recognition is not connected yet. Try the simulated match schedule to preview the flow.', 503);

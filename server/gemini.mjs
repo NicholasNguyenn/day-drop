@@ -1,5 +1,5 @@
 import { extractionInstructions, extractionSchema, parseExtraction } from '../shared/extraction.mjs';
-import { ApiError } from './quota.mjs';
+import { ApiError } from './quota-core.mjs';
 import { inspectImage } from './image-validation.mjs';
 
 export function estimateInputTokens(input) {

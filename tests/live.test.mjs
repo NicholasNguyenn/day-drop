@@ -26,7 +26,7 @@ test('live startup requires a key, owner free-project confirmation and real quot
   const base = { GEMINI_FREE_TIER_CONFIRMED: 'true', GEMINI_API_KEY: 'test' };
   assert.throws(() => liveConfiguration(base), /RPM/);
   assert.throws(() => liveConfiguration({ ...base, GEMINI_MODEL: 'paid-alternative' }), /Only/);
-  assert.equal(config().limits.globalBurst, 2); assert.equal(config().limits.globalDaily, 10);
+  assert.equal(config().limits.globalBurst, 16); assert.equal(config().limits.globalDaily, 80);
   assert.throws(() => createApp({ mode: 'gemini' }), /verified owner/);
 });
 

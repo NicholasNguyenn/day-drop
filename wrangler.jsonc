@@ -1,0 +1,25 @@
+{
+  // Daydrop's hosted analysis service on Cloudflare's free plan. See docs/development.md.
+  "name": "daydrop-api",
+  "main": "server/worker.mjs",
+  "compatibility_date": "2025-09-01",
+  // The service uses node:crypto and Buffer.
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "durable_objects": { "bindings": [{ "name": "ANALYSIS", "class_name": "Analysis" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Analysis"] }],
+  // The Gemini key is not here: set it with `npx wrangler secret put GEMINI_API_KEY`.
+  "vars": {
+    // Set to "true" only after checking that the AI Studio project has billing disabled.
+    "GEMINI_FREE_TIER_CONFIRMED": "true",
+    // Copy this model's limits from AI Studio. Zero keeps analysis switched off.
+    "GEMINI_RPM": "15",
+    "GEMINI_RPD": "500",
+    "GEMINI_TPM": "250000",
+    // Set to "false" and deploy to pause analysis.
+    "ANALYSIS_ENABLED": "true",
+    // The extension's 32-letter ID. Empty accepts any extension.
+    "ALLOWED_EXTENSION_ID": ""
+  }
+}

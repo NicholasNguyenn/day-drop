@@ -1,4 +1,4 @@
-import { ApiError } from './quota.mjs';
+import { ApiError } from './quota-core.mjs';
 
 // Inspect container dimensions without decoding potentially enormous images.
 // The provider still validates image content; no URLs or remote images are fetched.
