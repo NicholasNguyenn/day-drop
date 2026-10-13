@@ -5,7 +5,7 @@ export function googleConfigured() {
 }
 
 export async function connectGoogle() {
-  if (!googleConfigured()) throw new Error('Google Calendar needs OAuth setup for this development build. See the README setup steps, or download an ICS file.');
+  if (!googleConfigured()) throw new Error('Google Calendar connection is not available in this build. Download an ICS file instead.');
   const result = await chrome.identity.getAuthToken({ interactive: true });
   if (!result?.token) throw new Error('Google Calendar connection was not completed.');
   return result.token;
