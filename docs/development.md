@@ -88,7 +88,7 @@ Today/tomorrow resolve once from the selected time zone when analysis starts. A 
 
 Google sign-in and live imports are not configured or tested here. ICS works now. AI sessions never receive Google OAuth tokens.
 
-For future installed-extension testing, configure an owner-managed Chrome Extension OAuth client tied to the extension ID. Set GOOGLE_CLIENT_ID in .env and rebuild. CHROME_EXTENSION_KEY, when used, is Chrome’s public extension key, never a private signing key. The generated manifest requests calendar.events.owned and calendar.calendarlist.readonly. Users connect their own Google account; the panel lists owned calendars and requires an explicit import action.
+For future installed-extension testing, configure an owner-managed Chrome Extension OAuth client tied to the extension ID. Set GOOGLE_CLIENT_ID in .env and rebuild. CHROME_EXTENSION_KEY, when used, is Chrome’s public extension key, never a private signing key. The generated manifest requests calendar.events.owned, calendar.calendarlist.readonly, and calendar.app.created (to create a new calendar from the panel). Users connect their own Google account; the panel lists owned calendars and requires an explicit import action.
 
 Imports use fingerprints and deterministic IDs to handle repeats and partial failures. Production requires applicable OAuth verification and accurate Chrome Web Store disclosures. Live calendar writes need separate authorization during development.
 

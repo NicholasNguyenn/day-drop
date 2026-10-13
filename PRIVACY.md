@@ -39,7 +39,7 @@ The current prototype has no hosted analytics, advertising SDK, or advertising u
 
 Direct Google Calendar sign-in is not enabled in the current prototype. Downloading an ICS file does not send events to a calendar provider automatically; you decide where to import or share it.
 
-In a build with Google Calendar connection configured, Chrome handles authorization. Daydrop requests access to list your calendars and manage events in calendars you own. The feature uses that access to display owned calendars, check for previously imported events, and add the selected reviewed events after your explicit import action. Event titles, dates, locations, descriptions, and duplicate-prevention identifiers are sent directly to Google's Calendar API.
+In a build with Google Calendar connection configured, Chrome handles authorization. Daydrop requests access to list your calendars, manage events in calendars you own, and create new calendars. The feature uses that access to display owned calendars, create a new calendar when you ask for one, check for previously imported events, and add the selected reviewed events after your explicit import action. The calendar you last chose is remembered on your device. Event titles, dates, locations, descriptions, and duplicate-prevention identifiers are sent directly to Google's Calendar API.
 
 Daydrop does not ask for your Google password. It holds the access token in panel memory, while Chrome can maintain its own authorization cache. Google account tokens and Calendar API responses are not sent to the analysis service as part of this connection. Google handles calendar data under its own policies.
 

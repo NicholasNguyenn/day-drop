@@ -5,7 +5,7 @@ import { createApp, validateInput } from '../server/index.mjs';
 import { extractWithGemini, ServiceError } from '../server/gemini.mjs';
 import { makeAnalysisContext } from '../shared/dates.mjs';
 import { normalizeCandidates } from '../shared/events.mjs';
-import { importGoogleEvents, listCalendars } from '../dist/extension/google.mjs';
+import { importGoogleEvents, listCalendars, createCalendar } from '../dist/extension/google.mjs';
 import { backendUrl } from '../dist/extension/service.mjs';
 
 const context = makeAnalysisContext('America/Chicago', '2026-10-06T18:00:00Z');
@@ -56,6 +56,16 @@ test('Calendar list paginates and only includes calendars covered by owned scope
       : (assert.match(url, /pageToken=next/), response(200, { items: [{ id: 'primary', primary: true, accessRole: 'owner' }] }));
   });
   assert.equal(calls, 2); assert.deepEqual(calendars.map(item => item.id), ['primary', 'own']);
+});
+
+test('creating a calendar posts a trimmed name and rejects an empty one', async () => {
+  let request;
+  const created = await createCalendar('test-token', '  Daydrop  ', async (url, options) => {
+    request = { url, options }; return response(200, { id: 'new', summary: 'Daydrop' });
+  });
+  assert.match(request.url, /calendar\/v3\/calendars$/); assert.equal(request.options.method, 'POST');
+  assert.deepEqual(JSON.parse(request.options.body), { summary: 'Daydrop' }); assert.equal(created.id, 'new');
+  await assert.rejects(() => createCalendar('test-token', '   ', async () => assert.fail('no request expected')), /Enter a name/);
 });
 
 test('repeat Calendar imports skip existing fingerprints and make lost-response retries safe', async () => {

@@ -22,6 +22,8 @@ if (process.env.GOOGLE_CLIENT_ID) {
   manifest.oauth2 = { client_id: process.env.GOOGLE_CLIENT_ID, scopes: [
     'https://www.googleapis.com/auth/calendar.events.owned',
     'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+    // Lets the panel create a new calendar; it grants no access to existing ones.
+    'https://www.googleapis.com/auth/calendar.app.created',
   ] };
 }
 if (process.env.CHROME_EXTENSION_KEY) manifest.key = process.env.CHROME_EXTENSION_KEY;

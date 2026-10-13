@@ -5,7 +5,7 @@ import { capturePage } from './providers.mjs';
 import { AnalysisClient } from './service.mjs';
 import { matchScheduleImage } from './demo.mjs';
 import { serviceMode } from './service-config.mjs';
-import { googleConfigured, connectGoogle, listCalendars, importGoogleEvents } from './google.mjs';
+import { googleConfigured, connectGoogle, listCalendars, createCalendar, importGoogleEvents } from './google.mjs';
 
 const $ = id => document.getElementById(id);
 const defaultZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -33,7 +33,7 @@ function showStatus(message, tone = 'info') {
 
 function persist() {
   const saved = structuredClone({ drafts: state.drafts, preferences: {
-      version: 3, timeZone: state.timeZone, installationId: state.installationId,
+      version: 3, timeZone: state.timeZone, installationId: state.installationId, calendarId: state.calendarId,
     } });
   saveQueue = saveQueue.then(async () => {
       if (globalThis.chrome?.storage?.local) await chrome.storage.local.set({ autoCalendar: saved });
@@ -57,10 +57,12 @@ function refreshActions() {
   $('selection-note').textContent = unresolved ? unresolved + (unresolved === 1 ? ' needs attention' : ' need attention') : unreviewed ? unreviewed + ' to review' : selected.length ? 'Ready to export' : 'Review before adding';
   $('download-ics').disabled = state.busy || selected.length === 0 || unresolved > 0 || unreviewed > 0;
   const googleReady = isExtension && googleConfigured();
-  $('google-action').disabled = state.busy || !googleReady || selected.length === 0 || unresolved > 0 || unreviewed > 0;
+  // Connecting is always allowed so calendars can be chosen during review; adding needs reviewed events.
+  $('google-action').disabled = state.busy || !googleReady || (Boolean(state.token) && (selected.length === 0 || unresolved > 0 || unreviewed > 0));
   $('google-action').textContent = !googleReady ? 'Google setup' : state.token ? 'Add to Google ↗' : 'Connect Google ↗';
   $('google-action').title = googleReady ? '' : 'Google Calendar requires an installed extension and OAuth configuration. ICS is ready to use.';
   $('calendar-choice').hidden = !state.token;
+  if (!state.token) $('new-calendar').hidden = true;
   $('analyze-input').disabled = state.busy || state.usage?.remaining === 0 || (state.tab === 'screenshot' ? !state.image : !$('source-text').value.trim());
   $('image-help').hidden = false;
   $('image-help-text').textContent = isMock ? 'Preview the four-match schedule below. Real screenshot recognition is not connected in mock mode.'
@@ -182,6 +184,15 @@ function renderDrafts() {
     field('End time', 'endTime', { type: 'time', time: true });
     field('Time zone', 'timeZone', { wide: true }); field('Location', 'location', { wide: true });
     field('Notes', 'description', { wide: true, multiline: true });
+    if (state.token && state.calendars.length) {
+      // Empty means "follow the calendar chosen in the export bar".
+      const label = element('label', 'wide'); label.append(document.createTextNode('Google calendar'));
+      const choice = element('select', 'draft-calendar'); const fallback = element('option', '', defaultCalendarLabel()); fallback.value = '';
+      choice.append(fallback, ...state.calendars.map(calendar => { const option = element('option', '', calendar.summary); option.value = calendar.id; return option; }));
+      if (state.calendars.some(calendar => calendar.id === draft.calendarId)) choice.value = draft.calendarId;
+      choice.addEventListener('change', () => { draft.calendarId = choice.value; state.results.delete(draft.id); persist(); updateCard(card, draft); });
+      label.append(choice); fields.append(label);
+    }
     body.append(fields);
     if (draft.evidence || draft.source?.url) {
       const evidence = element('div', 'evidence'); evidence.append(element('strong', '', 'Source evidence'));
@@ -420,23 +431,64 @@ $('download-ics').addEventListener('click', () => {
     showStatus('Downloaded ' + selected.length + (selected.length === 1 ? ' reviewed event.' : ' reviewed events.'));
   } catch (error) { showStatus(error.message, 'error'); }
 });
+const newCalendar = '__new__';
+const defaultCalendarLabel = () => 'Same as all events (' + (state.calendars.find(calendar => calendar.id === $('calendar').value)?.summary || 'choose below') + ')';
+function renderCalendars() {
+  const options = state.calendars.map(calendar => { const option = element('option', '', calendar.summary); option.value = calendar.id; return option; });
+  const create = element('option', '', 'New calendar…'); create.value = newCalendar;
+  $('calendar').replaceChildren(...options, create);
+  // The last calendar used is the default; otherwise Google's primary calendar, which is listed first.
+  if (state.calendars.some(calendar => calendar.id === state.calendarId)) $('calendar').value = state.calendarId;
+  $('new-calendar').hidden = true; renderDrafts();
+}
+async function loadCalendars(interactive) {
+  const token = await connectGoogle(interactive);
+  const calendars = await listCalendars(token);
+  if (!calendars.length) throw new Error('No calendars owned by this account were found. You can download an ICS file.');
+  state.token = token; state.calendars = calendars; renderCalendars();
+}
+$('calendar').addEventListener('change', () => {
+  const value = $('calendar').value; $('new-calendar').hidden = value !== newCalendar;
+  if (value === newCalendar) $('new-calendar-name').focus(); else { state.calendarId = value; persist(); }
+  for (const option of document.querySelectorAll('.draft-calendar option[value=""]')) option.textContent = defaultCalendarLabel();
+});
+$('create-calendar').addEventListener('click', async () => {
+  if (state.busy || !state.token) return;
+  setBusy(true);
+  try {
+    const calendar = await createCalendar(state.token, $('new-calendar-name').value);
+    state.calendars.push(calendar); state.calendarId = calendar.id; $('new-calendar-name').value = ''; persist(); renderCalendars();
+    showStatus('Created “' + calendar.summary + '”. New events will go there.');
+  } catch (error) {
+    // A token issued before calendar creation was added cannot create calendars.
+    if (/did not grant/.test(error.message)) {
+      await chrome.identity.removeCachedAuthToken({ token: state.token }); state.token = null;
+      showStatus('Google has not allowed Daydrop to create calendars yet. Click Connect Google and approve it.', 'error');
+    } else showStatus(error.message, 'error');
+  } finally { setBusy(false); }
+});
 $('google-action').addEventListener('click', async () => {
   if (state.busy) return;
   setBusy(true);
   try {
     if (!state.token) {
-      const token = await connectGoogle();
-      const calendars = await listCalendars(token);
-      if (!calendars.length) throw new Error('No calendars owned by this account were found. You can download an ICS file.');
-      state.token = token; state.calendars = calendars;
-      $('calendar').replaceChildren(...calendars.map(calendar => { const option = element('option', '', calendar.summary); option.value = calendar.id; return option; }));
-      showStatus('Google connected. Choose your calendar, then add the selected events.');
+      await loadCalendars(true);
+      showStatus('Google connected. Choose a calendar for all events, or set one on individual events.');
     } else {
+      if ($('calendar').value === newCalendar) throw new Error('Create the new calendar first, or choose an existing one.');
+      if (!state.calendars.some(calendar => calendar.id === $('calendar').value)) throw new Error('Choose a Google calendar first.');
       const selected = structuredClone(state.drafts.filter(draft => draft.selected));
       showStatus('Adding reviewed events to Google Calendar…');
-      const results = await importGoogleEvents(selected, $('calendar').value, state.token, {
+      // Each event goes to its own calendar when one is set, otherwise to the one chosen for all.
+      const groups = new Map();
+      for (const draft of selected) {
+        const id = state.calendars.some(calendar => calendar.id === draft.calendarId) ? draft.calendarId : $('calendar').value;
+        groups.set(id, [...(groups.get(id) || []), draft]);
+      }
+      const results = [];
+      for (const [calendarId, drafts] of groups) results.push(...await importGoogleEvents(drafts, calendarId, state.token, {
         onResult(result) { state.results.set(result.id, result); },
-      });
+      }));
       if (results.some(result => result.error?.includes('expired'))) state.token = null;
       renderDrafts();
       const added = results.filter(result => result.status === 'added').length;
@@ -459,6 +511,7 @@ async function initialize() {
         && typeof draft.title === 'string' && Array.isArray(draft.assumptions)).slice(0, 50) : [];
       if (isTimeZone(saved.preferences?.timeZone)) state.timeZone = saved.preferences.timeZone;
       if (/^[0-9a-f-]{36}$/i.test(saved.preferences?.installationId || '')) state.installationId = saved.preferences.installationId;
+      if (typeof saved.preferences?.calendarId === 'string' && saved.preferences.calendarId.length <= 300) state.calendarId = saved.preferences.calendarId;
     }
   } catch { showStatus('Saved drafts could not be loaded. You can start a new capture.', 'error'); }
   state.installationId ||= crypto.randomUUID();
@@ -468,6 +521,8 @@ async function initialize() {
     : 'Google Calendar needs the installed extension and OAuth setup from the README. Download ICS to use any calendar now.';
   preferencesChanged(); renderDrafts(); switchTab(state.tab);
   if (state.drafts.length) { $('capture-details').open = false; $('capture-summary').textContent = 'Add another capture'; }
+  // Reconnect quietly if Google access was approved before, so calendar choices show straight away.
+  if (isExtension && googleConfigured()) loadCalendars(false).then(refreshActions, () => {});
   await refreshUsage();
 }
 initialize().catch(error => showStatus('Could not initialize the panel: ' + error.message, 'error'));

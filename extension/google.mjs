@@ -4,9 +4,10 @@ export function googleConfigured() {
   return Boolean(globalThis.chrome?.runtime?.getManifest()?.oauth2?.client_id);
 }
 
-export async function connectGoogle() {
+// interactive: false reuses an earlier approval without showing any Google window.
+export async function connectGoogle(interactive = true) {
   if (!googleConfigured()) throw new Error('Google Calendar connection is not available in this build. Download an ICS file instead.');
-  const result = await chrome.identity.getAuthToken({ interactive: true });
+  const result = await chrome.identity.getAuthToken({ interactive });
   if (!result?.token) throw new Error('Google Calendar connection was not completed.');
   return result.token;
 }
@@ -35,6 +36,12 @@ export async function listCalendars(token, fetcher = fetch) {
     pageToken = data.nextPageToken;
   } while (pageToken);
   return calendars.sort((a, b) => Number(Boolean(b.primary)) - Number(Boolean(a.primary)));
+}
+
+export async function createCalendar(token, name, fetcher = fetch) {
+  const summary = String(name || '').trim().slice(0, 100);
+  if (!summary) throw new Error('Enter a name for the new calendar.');
+  return googleRequest(token, 'calendars', { method: 'POST', body: JSON.stringify({ summary }) }, fetcher);
 }
 
 export async function importGoogleEvents(drafts, calendarId, token, { fetcher = fetch, onResult = () => {} } = {}) {

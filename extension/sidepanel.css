@@ -372,6 +372,8 @@ h3 {
   top:13px;
   right:13px;
   font-size:13px}
+.event-card[open] .review-button.quick {
+  display:none}
 .review-button.quick {
   align-self:flex-end;
   margin:22px 0 0 auto;
@@ -558,6 +560,10 @@ label.invalid input {
   margin:9px 0 0;
   color:#667960}
 .calendar-choice {
+  margin-bottom:10px}
+.new-calendar {
+  display:flex;
+  gap:8px;
   margin-bottom:10px}
 .sr-only {
   position:absolute;
