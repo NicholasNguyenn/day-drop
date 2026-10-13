@@ -12,6 +12,7 @@ const assets = new Map([
   ...['sidepanel.html', 'sidepanel.css', 'sidepanel.mjs', 'providers.mjs', 'service.mjs', 'service-config.mjs', 'demo.mjs', 'google.mjs'].map(file =>
     ['/' + file, ['../extension/' + file, file.endsWith('.html') ? 'text/html' : file.endsWith('.css') ? 'text/css' : 'text/javascript']]),
   ...['dates', 'events', 'ics', 'extraction', 'basic-extraction', 'visual-dates'].map(name => ['/shared/' + name + '.mjs', ['../shared/' + name + '.mjs', 'text/javascript']]),
+  ['/icons/daydrop.svg', ['../extension/icons/daydrop.svg', 'image/svg+xml']],
 ]);
 function readJson(request, limit) {
   return new Promise((resolve, reject) => {
