@@ -34,6 +34,7 @@ function showStatus(message, tone = 'info') {
 function persist() {
   const saved = structuredClone({ drafts: state.drafts, preferences: {
       version: 3, timeZone: state.timeZone, installationId: state.installationId, calendarId: state.calendarId,
+      consented: state.consented === true,
     } });
   saveQueue = saveQueue.then(async () => {
       if (globalThis.chrome?.storage?.local) await chrome.storage.local.set({ autoCalendar: saved });
@@ -87,10 +88,12 @@ function refreshActions() {
   }
 }
 
+// The date tile shows month and day, so this line carries the weekday, a different year, and the time.
 function dateLabel(draft) {
   if (!isDate(draft.startDate)) return 'Choose a date';
-  const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-    .format(new Date(draft.startDate + 'T12:00:00Z'));
+  const year = draft.startDate.slice(0, 4);
+  const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short' }).format(new Date(draft.startDate + 'T12:00:00Z'))
+    + (year === String(new Date().getFullYear()) ? '' : ', ' + year);
   if (draft.allDay) return formatted + ' · All day';
   if (!draft.startTime) return formatted + ' · Choose a time';
   const [hour, minute] = draft.startTime.split(':').map(Number);
@@ -101,7 +104,7 @@ function dateLabel(draft) {
     end = ' – ' + (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h >= 12 ? ' PM' : ' AM');
     if (draft.endDate !== draft.startDate && isDate(draft.endDate)) end += ' (' + new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(new Date(draft.endDate + 'T12:00:00Z')) + ')';
   }
-  return formatted + '\n' + time + end + ' · ' + draft.timeZone;
+  return formatted + ' · ' + time + end + (draft.timeZone === state.timeZone ? '' : ' · ' + draft.timeZone);
 }
 
 const fieldIssues = { title: /title/i, startDate: /start date/i, endDate: /end date|final day/i, timeZone: /time zone/i,
@@ -110,12 +113,16 @@ const fieldIssues = { title: /title/i, startDate: /start date/i, endDate: /end d
 function updateCard(card, draft) {
   card.querySelector('.event-title').textContent = draft.title || 'Untitled event';
   card.querySelector('.event-date').textContent = dateLabel(draft);
+  const [month, day] = isDate(draft.startDate) ? new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' })
+    .format(new Date(draft.startDate + 'T12:00:00Z')).split(' ') : ['Date', '?'];
+  const tile = card.querySelector('.date-tile'); tile.firstChild.textContent = month.toUpperCase(); tile.lastChild.textContent = day;
   const issues = validateDraft(draft);
   const result = state.results.get(draft.id);
   const badge = card.querySelector('.event-state');
   badge.className = 'event-state';
-  badge.textContent = issues.length ? 'Needs attention' : needsReview(draft) ? draft.assumptions.length ? 'Review assumptions' : 'Review details' : draft.reviewed ? 'Reviewed' : 'Ready';
-  if (issues.length) badge.classList.add('needs-review');
+  const notes = draft.assumptions.length;
+  badge.textContent = issues.length ? 'Needs attention' : needsReview(draft) ? notes ? notes + (notes === 1 ? ' note to check' : ' notes to check') : 'Check details' : draft.reviewed ? 'Reviewed' : 'Ready';
+  if (issues.length) badge.classList.add('needs-review'); else if (needsReview(draft)) badge.classList.add('to-review');
   if (result) {
     badge.textContent = result.status === 'added' ? 'Added to Google' : result.status === 'duplicate' ? 'Already added' : 'Import failed';
     if (result.status === 'failed') badge.classList.add('failed');
@@ -133,7 +140,9 @@ function updateCard(card, draft) {
     review.textContent = issues.length ? 'Fix ' + issues.length + (issues.length === 1 ? ' field' : ' fields') + ' to continue' : draft.reviewed ? 'Reviewed' : 'Mark reviewed';
     review.classList.toggle('primary', !done); review.classList.toggle('secondary', done);
   }
-  card.querySelector('.review-button.quick').hidden = !issues.length && !needsReview(draft);
+  const quick = card.querySelector('.review-button.quick');
+  quick.hidden = !issues.length && !needsReview(draft);
+  if (issues.length) quick.textContent = 'Fix ' + issues.length;
   card.querySelector('.event-select').setAttribute('aria-label', 'Select ' + (draft.title || 'untitled event'));
   refreshActions();
 }
@@ -151,7 +160,8 @@ function renderDrafts() {
     info.append(element('span', 'event-title'), element('span', 'event-date'), element('span', 'event-state'));
     // Stays visible on a collapsed card so review never requires reopening it.
     const quickReview = element('button', 'button primary review-button quick'); quickReview.type = 'button';
-    summary.append(checkbox, info, quickReview); card.append(summary);
+    const tile = element('div', 'date-tile'); tile.append(element('b'), element('span'));
+    summary.append(checkbox, tile, info, quickReview); card.append(summary);
     const body = element('div', 'card-body');
     const issueBox = element('div', 'issue-box');
     issueBox.append(element('strong', '', 'Fix these before exporting'), element('ul', 'issues')); body.append(issueBox);
@@ -272,8 +282,17 @@ function setImage(file, fixture = null) {
   $('image-preview').hidden = !state.image; $('dropzone').hidden = Boolean(state.image); refreshActions();
 }
 
+// The first live analysis waits for a one-time acknowledgement of where captures go.
+let pendingAnalysis = null;
+$('consent-accept').addEventListener('click', () => {
+  state.consented = true; persist(); $('consent').hidden = true;
+  const next = pendingAnalysis; pendingAnalysis = null; if (next) runAnalysis(next);
+});
+$('consent-cancel').addEventListener('click', () => { pendingAnalysis = null; $('consent').hidden = true; });
+
 async function runAnalysis(inputFactory) {
   if (state.busy) return;
+  if (!isMock && !state.consented) { pendingAnalysis = inputFactory; $('consent').hidden = false; $('consent-accept').focus(); return; }
   if (state.drafts.length >= 50) { showStatus('Remove some drafts before analyzing more. Your allowance has not been used.', 'error'); return; }
   let context;
   try { context = makeAnalysisContext(state.timeZone); }
@@ -322,7 +341,7 @@ function preferencesChanged() {
   $('mode-badge').lastChild.textContent = isMock ? 'Preview' : 'Gemini vision';
   $('capture-note').textContent = isMock ? 'Simulated results. No API key or model setup. No captures sent to Google.' : 'Find events sends this capture to our service and Google Gemini. No user API key needed.';
   $('analysis-privacy').textContent = isMock ? 'Development preview · simulated results. Screenshot recognition is not connected. No captures are sent to Google.'
-    : 'Selected captures go through our service to Google Gemini when you click Find events. Google’s free tier may use content to improve its products. Review before exporting.';
+    : 'Captures you analyze go through our service to Google Gemini. On its free tier, Google may use them to improve its products and human reviewers may read them, so avoid personal or sensitive captures.';
   $('text-mode-help').textContent = isMock ? 'Preview uses a simple text parser' : 'No API key needed';
   $('mock-controls').hidden = !isMock;
   refreshActions();
@@ -413,11 +432,13 @@ function updateUsage(usage) {
   state.usage = usage;
   $('usage-count').textContent = usage.remaining + ' of ' + usage.limit + ' free analyses left';
   $('usage-reset').textContent = 'Resets ' + new Date(usage.resetsAt).toLocaleString() + '. Manual drafts and ICS stay available.';
+  $('refresh-usage').hidden = true;
   refreshActions();
 }
+// The button only appears when the service could not be reached. Its click also lets Chrome ask for access to the service.
 async function refreshUsage(requestPermission = false) {
   try { await analysisClient.usage({ requestPermission }); }
-  catch (error) { $('usage-count').textContent = 'Allowance unavailable'; $('usage-reset').textContent = error.message; }
+  catch (error) { $('usage-count').textContent = 'Allowance unavailable'; $('usage-reset').textContent = error.message; $('refresh-usage').hidden = false; }
 }
 $('default-zone').addEventListener('change', preferencesChanged);
 $('refresh-usage').addEventListener('click', () => refreshUsage(true));
@@ -511,6 +532,7 @@ async function initialize() {
         && typeof draft.title === 'string' && Array.isArray(draft.assumptions)).slice(0, 50) : [];
       if (isTimeZone(saved.preferences?.timeZone)) state.timeZone = saved.preferences.timeZone;
       if (/^[0-9a-f-]{36}$/i.test(saved.preferences?.installationId || '')) state.installationId = saved.preferences.installationId;
+      state.consented = saved.preferences?.consented === true;
       if (typeof saved.preferences?.calendarId === 'string' && saved.preferences.calendarId.length <= 300) state.calendarId = saved.preferences.calendarId;
     }
   } catch { showStatus('Saved drafts could not be loaded. You can start a new capture.', 'error'); }

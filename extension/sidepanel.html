@@ -16,16 +16,12 @@
     </header>
 
     <main>
-      <section class="intro">
-        <p class="eyebrow">LESS COPYING. MORE PLANNING.</p>
-        <h1>From capture<br>to calendar.</h1>
-        <p>Find the plans. Check the details. Make them yours.</p>
-      </section>
+      <h1>From capture to calendar.</h1>
 
       <ol class="workflow" aria-label="Event workflow"><li id="step-capture" aria-current="step"><span>1</span>Capture</li><li id="step-review"><span>2</span>Review</li><li id="step-export"><span>3</span>Export</li></ol>
 
       <section class="allowance" aria-label="Analysis allowance">
-        <div><strong id="usage-count">Checking allowance…</strong><button id="refresh-usage" class="text-button" type="button">Refresh allowance</button></div>
+        <div><strong id="usage-count">Checking allowance…</strong><button id="refresh-usage" class="text-button" type="button" hidden>Try again</button></div>
         <p id="usage-reset">Manual drafts and ICS stay available.</p>
         <p id="analysis-privacy" class="preview-notice">Development preview · simulated results. Screenshot recognition is not connected. No captures are sent to Google.</p>
       </section>
@@ -39,10 +35,8 @@
         </div>
         <div id="screenshot-panel" role="tabpanel" aria-labelledby="screenshot-tab">
           <button id="dropzone" class="dropzone" type="button">
-            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg></span>
-            <strong>Paste a screenshot</strong>
-            <span>or click to upload · PNG, JPG, WebP</span>
-            <span class="paste-key">Ctrl + V</span>
+            <strong>Paste, drop or pick a screenshot</strong>
+            <span>Ctrl + V, or click to upload · PNG, JPG, WebP</span>
           </button>
           <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
           <div id="image-preview" class="image-preview" hidden>
@@ -58,7 +52,7 @@
         </div>
         <button id="analyze-input" class="button primary analyze" type="button" disabled>Find events <span aria-hidden="true">↗</span></button>
         <div class="page-actions">
-          <button id="analyze-page" class="text-button" type="button"><span aria-hidden="true">▤</span> Analyze this page</button>
+          <button id="analyze-page" class="text-button" type="button" title="Reads the text of the current tab. Click the Daydrop toolbar icon on that tab first."><span aria-hidden="true">▤</span> Analyze this page</button>
           <span aria-hidden="true">·</span>
           <button id="capture-page" class="text-button" type="button">Capture page image</button>
         </div>
@@ -66,6 +60,12 @@
       </section>
       </details>
 
+      <div id="consent" class="message consent" role="group" aria-labelledby="consent-title" hidden>
+        <strong id="consent-title">Before your first analysis</strong>
+        <p>Daydrop sends the capture you choose to our service and to Google Gemini’s free tier. Google may use it to improve its products, and human reviewers may read it. <b>Don’t capture anything personal, sensitive or confidential.</b></p>
+        <p>Daydrop is for adults and isn’t offered in the EEA, the UK or Switzerland. <a href="https://github.com/NicholasNguyenn/day-drop/blob/HEAD/PRIVACY.md" target="_blank" rel="noreferrer">Privacy policy</a></p>
+        <div><button id="consent-accept" class="button primary" type="button">I understand, continue</button><button id="consent-cancel" class="text-button" type="button">Cancel</button></div>
+      </div>
       <div id="status" class="message" role="status" aria-live="polite" hidden></div>
       <div id="undo-bar" class="undo-bar" hidden><span id="undo-message"></span><button id="undo-remove" type="button" class="text-button">Undo</button></div>
       <button id="cancel-analysis" class="text-button cancel" type="button" hidden>Cancel analysis</button>
@@ -91,6 +91,7 @@
           <div id="mock-controls"><label>Preview response<select id="mock-scenario"><option value="normal">Normal</option><option value="empty">No events</option><option value="unavailable">Service unavailable</option><option value="invalid">Invalid model response</option><option value="timeout">Timeout</option></select></label>
           <p class="field-help">Development controls. Every accepted analysis uses the preview allowance, including simulated failures.</p></div>
           <p id="google-help" class="field-help">Google imports require OAuth setup. ICS export works without signing in.</p>
+          <p class="field-help"><a href="https://github.com/NicholasNguyenn/day-drop/blob/HEAD/PRIVACY.md" target="_blank" rel="noreferrer">Privacy policy</a></p>
         </div>
       </details>
       <datalist id="time-zones"></datalist>
@@ -100,9 +101,7 @@
       <div class="export-heading"><strong id="selection-count">0 events selected</strong><span id="selection-note">Review before adding</span></div>
       <label id="calendar-choice" class="calendar-choice" hidden>Google calendar<select id="calendar"></select></label>
       <div id="new-calendar" class="new-calendar" hidden><input id="new-calendar-name" type="text" maxlength="100" placeholder="New calendar name" aria-label="New calendar name"><button id="create-calendar" class="button secondary" type="button">Create</button></div>
-      <div class="export-actions"><button id="download-ics" class="button secondary" type="button" disabled><span aria-hidden="true">↓</span> Download .ics</button><button id="google-action" class="button primary" type="button" disabled>Connect Google <span aria-hidden="true">↗</span></button></div>
-      <p>Same reviewed events. Your choice of calendar.</p>
-    </footer>
+      <div class="export-actions"><button id="download-ics" class="button secondary" type="button" disabled><span aria-hidden="true">↓</span> Download .ics</button><button id="google-action" class="button primary" type="button" disabled>Connect Google <span aria-hidden="true">↗</span></button></div>    </footer>
   </div>
 </body>
 </html>

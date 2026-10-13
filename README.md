@@ -48,6 +48,6 @@ The current test build allows five analyses per installation per day. The panel 
 
 ## Privacy and support
 
-[Privacy Policy](PRIVACY.md) · [Contact](mailto:nicholasnguyen1103@gmail.com) · [Report a problem](https://github.com/NicholasNguyenn/auto-calendar/issues)
+[Privacy Policy](PRIVACY.md) · [Contact](mailto:nicholasnguyen1103@gmail.com) · [Report a problem](https://github.com/NicholasNguyenn/day-drop/issues)
 
 Do not post private screenshots, account tokens, or personal event details in public issue reports.

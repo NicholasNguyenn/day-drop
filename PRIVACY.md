@@ -2,7 +2,7 @@
 
 Last updated: October 12, 2026
 
-This policy describes the current Daydrop prototype, maintained by the owner of the [Daydrop repository](https://github.com/NicholasNguyenn/auto-calendar). It covers the Chrome extension, browser preview, and accompanying analysis service. Daydrop does not yet offer a public hosted service or Chrome Web Store release. A future release with different providers or data handling will need an updated policy and appropriate notices before use.
+This policy describes the current Daydrop prototype, maintained by the owner of the [Daydrop repository](https://github.com/NicholasNguyenn/day-drop). It covers the Chrome extension, browser preview, and accompanying analysis service. Daydrop does not yet offer a public hosted service or Chrome Web Store release. A future release with different providers or data handling will need an updated policy and appropriate notices before use.
 
 ## Before using live analysis
 
@@ -37,7 +37,7 @@ The current prototype has no hosted analytics, advertising SDK, or advertising u
 
 ## Google Calendar and other calendar apps
 
-Direct Google Calendar sign-in is not enabled in the current prototype. Downloading an ICS file does not send events to a calendar provider automatically; you decide where to import or share it.
+Direct Google Calendar sign-in is only available in builds configured with a Google sign-in client, and its consent screen is still in Google's testing mode. Downloading an ICS file does not send events to a calendar provider automatically; you decide where to import or share it.
 
 In a build with Google Calendar connection configured, Chrome handles authorization. Daydrop requests access to list your calendars, manage events in calendars you own, and create new calendars. The feature uses that access to display owned calendars, create a new calendar when you ask for one, check for previously imported events, and add the selected reviewed events after your explicit import action. The calendar you last chose is remembered on your device. Event titles, dates, locations, descriptions, and duplicate-prevention identifiers are sent directly to Google's Calendar API.
 
@@ -66,4 +66,4 @@ This policy describes current handling; it is not a promise that the prototype m
 
 Contact the Daydrop maintainer at [nicholasnguyen1103@gmail.com](mailto:nicholasnguyen1103@gmail.com) for privacy questions or requests about service records. We may need information sufficient to locate a record, and may not be able to identify records associated with an otherwise anonymous session. Do not send passwords, account tokens, or API keys.
 
-For general bug reports, use the [issue tracker](https://github.com/NicholasNguyenn/auto-calendar/issues). Do not include private screenshots or personal event details in public reports. If you accidentally send prohibited information to Google, contact the maintainer for assistance; Daydrop cannot promise to remove Google's copy.
+For general bug reports, use the [issue tracker](https://github.com/NicholasNguyenn/day-drop/issues). Do not include private screenshots or personal event details in public reports. If you accidentally send prohibited information to Google, contact the maintainer for assistance; Daydrop cannot promise to remove Google's copy.

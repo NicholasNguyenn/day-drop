@@ -25,12 +25,18 @@ export function readCurrentDocument() {
     title: document.title, url: location.href, type: selection ? 'selection' : 'page' };
 }
 
+// Access to a tab comes from a toolbar click on that tab and ends when the tab moves to another site.
+const needsToolbarClick = 'Daydrop needs your go-ahead for this tab. Click the Daydrop icon in Chrome’s toolbar, then try again. '
+  + 'A few pages, such as Chrome’s own pages and the Web Store, can’t be read at all; paste a screenshot for those.';
+
 export async function capturePage(asImage = false) {
   if (!globalThis.chrome?.scripting) throw new Error('Page capture works when this interface is loaded as a Chrome extension.');
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error('Open a webpage to analyze.');
   if (asImage) {
-    const data = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    let data;
+    try { data = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }); }
+    catch { throw new Error(needsToolbarClick); }
     return { image: await (await fetch(data)).blob(), source: { type: 'page-image', title: tab.title, url: tab.url } };
   }
   try {
@@ -40,6 +46,6 @@ export async function capturePage(asImage = false) {
       source: { type: result.result.type, title: result.result.title, url: result.result.url } };
   } catch (error) {
     if (error.message.includes('no readable text')) throw error;
-    throw new Error('Chrome could not read this page. Click the extension toolbar icon on this tab and try again, or paste a screenshot.');
+    throw new Error(needsToolbarClick);
   }
 }

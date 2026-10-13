@@ -20,7 +20,7 @@ export class AnalysisClient {
     if (!globalThis.chrome?.permissions) return;
     const origins = [this.origin + '/*'];
     if (await chrome.permissions.contains({ origins })) return;
-    if (!request || !await chrome.permissions.request({ origins })) throw new Error('Click Refresh allowance to connect to the development service.');
+    if (!request || !await chrome.permissions.request({ origins })) throw new Error('Click Try again to connect to the analysis service.');
   }
   async request(route, { body, signal, authorized = true } = {}) {
     let response;

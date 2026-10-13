@@ -25,7 +25,7 @@ Settings contain the default time zone and development response scenarios (norma
 
 ## Load the extension
 
-In Chrome, open chrome://extensions, enable Developer mode, and load the generated dist/extension directory. Click the toolbar icon to open the side panel on a webpage. Page capture requires the installed extension. For this development build, run the preview service and click Refresh allowance to grant access to its loopback origin. There is no API key or model field.
+In Chrome, open chrome://extensions, enable Developer mode, and load the generated dist/extension directory. Click the toolbar icon to open the side panel on a webpage. Page capture requires the installed extension. For this development build, run the preview service and click Try again next to “Allowance unavailable” to grant access to its loopback origin. There is no API key or model field.
 
 The development service origin is bundled in extension/service-config.mjs. Production packaging must replace it with a pinned HTTPS origin and the corresponding narrow permission. The development build is not ready to publish.
 
